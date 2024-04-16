@@ -74,23 +74,20 @@ fragment PR on PullRequest {
 """
 
 def search_query(search):
-    return FRAGMENT_ISSUE + FRAGMENT_PR + """
-        query {
-          search(first: 100, type: ISSUE, query: \""""+search+"""\") {
-            nodes {
-              ... on PullRequest {
-                  ...PR
-              }
-              ... on Issue {
-                  ...Issue
-              }
+    return """
+        search(first: 100, type: ISSUE, query: \""""+search+"""\") {
+          nodes {
+            ... on PullRequest {
+                ...PR
+            }
+            ... on Issue {
+                ...Issue
             }
           }
         }
     """
 
-def notifications(org=None):
-    rows = github_api('notifications')
+def report_notifications(rows, org=None):
     rows.sort(key = lambda row: row['updated_at'])
 
     table = Table(title="Notifications", box=box.SIMPLE)
@@ -114,13 +111,8 @@ def notifications(org=None):
         )
     return table
 
-def open_prs(org=None):
-    query = "state:open author:Nadrieril is:pr"
-    if org:
-        query += f" org:{org}"
-    query = search_query(query)
-    result = run_graphql_query(query)
-    rows = result['data']['search']['nodes']
+def report_open_prs(data):
+    rows = data['nodes']
     rows.sort(key = lambda row: row['updatedAt'])
 
     table = Table(title="Open PRs", box=box.SIMPLE)
@@ -140,13 +132,8 @@ def open_prs(org=None):
         )
     return table
 
-def assigned(org=None):
-    query = "state:open assignee:Nadrieril"
-    if org:
-        query += f" org:{org}"
-    query = search_query(query)
-    result = run_graphql_query(query)
-    rows = result['data']['search']['nodes']
+def report_assigned(data):
+    rows = data['nodes']
     rows.sort(key = lambda row: row['updatedAt'])
 
     table = Table(title="Assigned PRs and issues", box=box.SIMPLE)
@@ -180,6 +167,18 @@ if __name__ == "__main__":
         json = json.loads(out.stdout)
         org = json['owner']['login']
 
-    print(notifications(org))
-    print(open_prs(org))
-    print(assigned(org))
+    notifications = github_api('notifications')
+    print(report_notifications(notifications, org))
+
+    open_prs_query = "state:open author:Nadrieril is:pr"
+    assigned_query = "state:open assignee:Nadrieril"
+    if org:
+        open_prs_query += f" org:{org}"
+        assigned_query += f" org:{org}"
+    query = FRAGMENT_ISSUE + FRAGMENT_PR + f"""query {{
+        open_prs: {search_query(open_prs_query)}
+        assigned: {search_query(assigned_query)}
+    }}"""
+    result = run_graphql_query(query)
+    print(report_open_prs(result['data']['open_prs']))
+    print(report_assigned(result['data']['assigned']))
