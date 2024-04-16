@@ -146,14 +146,18 @@ def report_assigned(data):
     table.add_column("Number", style="green")
     table.add_column("Title")
     table.add_column("Ref", style="blue")
+    table.add_column("Labels")
     table.add_column("Updated", style="bright_black")
 
     for row in rows:
+        labels = row['labels']['nodes']
+        labels = ", ".join(l['name'] for l in labels)
         table.add_row(
             row['repository']['name'],
             f"#{row['number']}",
             Text(row['title'], style=Style(link=row['url'])),
             row['closing_pr'],
+            labels,
             date_ago(row['updatedAt']),
         )
     return table
