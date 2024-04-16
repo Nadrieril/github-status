@@ -140,8 +140,9 @@ def report_assigned(data):
                     number = f"#{item['source']['number']}"
                     closing_pr = Text(number, style=Style(link=item['source']['url']))
         row['closing_pr'] = closing_pr
+        row['blocked'] = any('blocked' in l['name'] for l in row['labels']['nodes'])
 
-    rows.sort(key = lambda row: (row['closing_pr'] is None, row['updatedAt']))
+    rows.sort(key = lambda row: (row['closing_pr'] is None, not row['blocked'], row['updatedAt']))
 
     table = Table(title="Assigned PRs and issues", box=box.SIMPLE)
     table.add_column("Repo")
