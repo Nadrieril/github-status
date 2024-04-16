@@ -131,7 +131,15 @@ def report_open_prs(data):
 
 def report_assigned(data):
     rows = data['nodes']
-    rows.sort(key = lambda row: row['updatedAt'])
+    for row in rows:
+        closing_pr = None
+        if cross_refs := row.get('timelineItems'):
+            for item in cross_refs['nodes']:
+                if item.get('willCloseTarget'):
+                    closing_pr = f"#{item['source']['number']}"
+        row['closing_pr'] = closing_pr
+
+    rows.sort(key = lambda row: (row['closing_pr'] is None, row['updatedAt']))
 
     table = Table(title="Assigned PRs and issues", box=box.SIMPLE)
     table.add_column("Repo")
@@ -141,17 +149,11 @@ def report_assigned(data):
     table.add_column("Updated", style="bright_black")
 
     for row in rows:
-        closing_pr = ""
-        if cross_refs := row.get('timelineItems'):
-            for item in cross_refs['nodes']:
-                if item.get('willCloseTarget'):
-                    closing_pr = f"#{item['source']['number']}"
-
         table.add_row(
             row['repository']['name'],
             f"#{row['number']}",
             Text(row['title'], style=Style(link=row['url'])),
-            closing_pr,
+            row['closing_pr'],
             date_ago(row['updatedAt']),
         )
     return table
