@@ -1,4 +1,4 @@
-import json, os, subprocess, yaml
+import json, subprocess
 from dateutil.parser import parse
 from datetime import datetime, UTC
 from babel.dates import format_timedelta
@@ -12,9 +12,6 @@ def date_ago(date):
     now = datetime.now(UTC)
     date = parse(date) - now
     return format_timedelta(date, add_direction=True)
-
-with open(os.path.expanduser("~/.config/gh/hosts.yml"), "r") as f:
-    GITHUB_TOKEN = yaml.safe_load(f)['github.com']['oauth_token']
 
 def github_api(endpoint, json=None):
     headers = {"Authorization": f"Bearer {GITHUB_TOKEN}"}
@@ -160,6 +157,11 @@ def report_assigned(data):
     return table
 
 if __name__ == "__main__":
+    # Retrieve the GitHub login token.
+    out = subprocess.run(["gh", "auth", "token"], capture_output=True)
+    assert out.returncode == 0
+    GITHUB_TOKEN = out.stdout.decode('utf-8').strip()
+
     # If we're in a github repo, filter all the output to this repo's organization.
     org = None
     out = subprocess.run(["gh", "repo", "view", "--json", "owner"], capture_output=True)
