@@ -45,6 +45,7 @@ FRAGMENT_COMMON = """
         source {
           ... on PullRequest {
             number
+            url
           }
         }
       }
@@ -136,7 +137,8 @@ def report_assigned(data):
         if cross_refs := row.get('timelineItems'):
             for item in cross_refs['nodes']:
                 if item.get('willCloseTarget'):
-                    closing_pr = f"#{item['source']['number']}"
+                    number = f"#{item['source']['number']}"
+                    closing_pr = Text(number, style=Style(link=item['source']['url']))
         row['closing_pr'] = closing_pr
 
     rows.sort(key = lambda row: (row['closing_pr'] is None, row['updatedAt']))
