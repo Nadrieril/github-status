@@ -153,6 +153,9 @@ def report_assigned(data):
     table.add_column("Updated", style="bright_black")
 
     for row in rows:
+        style = None
+        if row['closing_pr'] or row['blocked']:
+            style = Style(dim=True)
         labels = row['labels']['nodes']
         labels = ", ".join(l['name'] for l in labels)
         table.add_row(
@@ -162,6 +165,7 @@ def report_assigned(data):
             row['closing_pr'],
             labels,
             date_ago(row['updatedAt']),
+            style=style,
         )
     return table
 
