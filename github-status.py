@@ -189,8 +189,8 @@ if __name__ == "__main__":
 
     notifications = github_api('notifications')
 
-    open_prs_query = "state:open author:Nadrieril is:pr"
-    assigned_query = "state:open assignee:Nadrieril"
+    open_prs_query = "state:open author:@me is:pr"
+    assigned_query = "state:open assignee:@me"
     if org:
         open_prs_query += f" org:{org}"
         assigned_query += f" org:{org}"
