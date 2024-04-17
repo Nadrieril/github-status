@@ -14,8 +14,8 @@ def date_ago(date):
     date = parse(date) - now
     return format_timedelta(date, add_direction=True)
 
-def github_api(endpoint, json=None):
-    headers = {"Authorization": f"Bearer {GITHUB_TOKEN}"}
+def github_api(token, endpoint, json=None):
+    headers = {"Authorization": f"Bearer {token}"}
     if json:
         response = requests.post(f"https://api.github.com/{endpoint}", json=json, headers=headers)
     else:
@@ -25,8 +25,8 @@ def github_api(endpoint, json=None):
     else:
         raise Exception("Query failed to run by returning code of {}. {}".format(response.status_code, response.text))
 
-def run_graphql_query(query):
-    return github_api('graphql', {'query': query})
+def run_graphql_query(token, query):
+    return github_api(token, 'graphql', {'query': query})
 
 FRAGMENT_COMMON = """
   author { login }
@@ -187,7 +187,7 @@ if __name__ == "__main__":
         json = json.loads(out.stdout)
         org = json['owner']['login']
 
-    notifications = github_api('notifications')
+    notifications = github_api(GITHUB_TOKEN, 'notifications')
 
     open_prs_query = "state:open author:@me is:pr"
     assigned_query = "state:open assignee:@me"
@@ -199,7 +199,7 @@ if __name__ == "__main__":
         open_prs: {search_query(open_prs_query)}
         assigned: {search_query(assigned_query)}
     }}"""
-    graphql_result = run_graphql_query(query)['data']
+    graphql_result = run_graphql_query(GITHUB_TOKEN, query)['data']
 
     user_id = graphql_result['user']['databaseId']
     print(report_notifications(notifications, user_id, org))
