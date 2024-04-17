@@ -1,4 +1,5 @@
 import json, subprocess
+import base64
 from dateutil.parser import parse
 from datetime import datetime, UTC
 from babel.dates import format_timedelta
@@ -85,7 +86,9 @@ def search_query(search):
         }
     """
 
-def report_notifications(rows, org=None):
+# Used to construct a notification token
+MAGIC_BITS = b'\x93\x00\xCE\x00\x67\x82\xa6\xb2'
+def report_notifications(rows, user_id, org=None):
     rows.sort(key = lambda row: row['updated_at'])
 
     table = Table(title="Notifications", box=box.SIMPLE)
@@ -100,6 +103,8 @@ def report_notifications(rows, org=None):
             if row['repository']['owner']['login'] != org:
                 continue
         url = row['subject']['url'].replace("api.", "").replace("repos/", "").replace("pulls", "pull")
+        notification_token = 'NT_' + base64.b64encode(MAGIC_BITS + f"{row['id']}:{user_id}".encode()).decode().rstrip('=')
+        url = url + f"?notification_referrer_id={notification_token}"
         table.add_row(
             row['repository']['name'],
             Text(row['subject']['title'], style=Style(link=url)),
@@ -183,7 +188,6 @@ if __name__ == "__main__":
         org = json['owner']['login']
 
     notifications = github_api('notifications')
-    print(report_notifications(notifications, org))
 
     open_prs_query = "state:open author:Nadrieril is:pr"
     assigned_query = "state:open assignee:Nadrieril"
@@ -191,9 +195,13 @@ if __name__ == "__main__":
         open_prs_query += f" org:{org}"
         assigned_query += f" org:{org}"
     query = FRAGMENT_ISSUE + FRAGMENT_PR + f"""query {{
+        user: viewer {{ databaseId }}
         open_prs: {search_query(open_prs_query)}
         assigned: {search_query(assigned_query)}
     }}"""
-    result = run_graphql_query(query)
-    print(report_open_prs(result['data']['open_prs']))
-    print(report_assigned(result['data']['assigned']))
+    graphql_result = run_graphql_query(query)['data']
+
+    user_id = graphql_result['user']['databaseId']
+    print(report_notifications(notifications, user_id, org))
+    print(report_open_prs(graphql_result['open_prs']))
+    print(report_assigned(graphql_result['assigned']))
