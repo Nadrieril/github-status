@@ -176,7 +176,7 @@ def report_assigned(data):
     table.add_column("Repo")
     table.add_column("Number", style="green")
     table.add_column("Title")
-    table.add_column("Ref", style="blue")
+    table.add_column("Fix", style="blue")
     table.add_column("Labels")
     table.add_column("Updated", style="bright_black")
 
