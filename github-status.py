@@ -69,6 +69,15 @@ fragment PR on PullRequest {
   headRefName
   mergeable
   reviewDecision
+  commits(last:1) {
+    nodes {
+      commit {
+        statusCheckRollup {
+          state
+        }
+      }
+    }
+  }
 }
 """
 
@@ -123,14 +132,24 @@ def report_open_prs(data):
     table = Table(title="Open PRs", box=box.SIMPLE)
     table.add_column("Repo")
     table.add_column("Number", style="green")
+    table.add_column("")
     table.add_column("Title")
     table.add_column("Branch", style="cyan")
     table.add_column("Updated", style="bright_black")
 
     for row in rows:
+        status = ""
+        ci_status = row['commits']['nodes'][0]['commit']['statusCheckRollup']['state']
+        if row['mergeable'] != 'MERGEABLE':
+            status = "❌"
+        elif ci_status == 'PENDING':
+            status = "🟡"
+        elif ci_status != 'SUCCESS':
+            status = "❌"
         table.add_row(
             row['repository']['name'],
             f"#{row['number']}",
+            status,
             Text(row['title'], style=Style(link=row['url'])),
             row['headRefName'],
             date_ago(row['updatedAt']),
