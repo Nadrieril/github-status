@@ -1,4 +1,4 @@
-import json, subprocess
+import sys, json, subprocess
 import base64
 from dateutil.parser import parse
 from datetime import datetime, UTC
@@ -184,10 +184,13 @@ if __name__ == "__main__":
 
     # If we're in a github repo, filter all the output to this repo's organization.
     org = None
-    out = subprocess.run(["gh", "repo", "view", "--json", "owner"], capture_output=True)
-    if out.returncode == 0:
-        json = json.loads(out.stdout)
-        org = json['owner']['login']
+    if len(sys.argv) > 1:
+        org = sys.argv[1]
+    else:
+        out = subprocess.run(["gh", "repo", "view", "--json", "owner"], capture_output=True)
+        if out.returncode == 0:
+            json = json.loads(out.stdout)
+            org = json['owner']['login']
 
     notifications = github_api(GITHUB_TOKEN, 'notifications')
 
