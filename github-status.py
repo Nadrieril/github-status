@@ -66,6 +66,7 @@ fragment Issue on Issue {
 FRAGMENT_PR = """
 fragment PR on PullRequest {
   """ + FRAGMENT_COMMON + """
+  isDraft
   headRefName
   mergeable
   reviewDecision
@@ -131,7 +132,7 @@ def report_open_prs(data):
 
     table = Table(title="Open PRs", box=box.SIMPLE)
     table.add_column("Repo")
-    table.add_column("Number", style="green")
+    table.add_column("Number")
     table.add_column("")
     table.add_column("Title")
     table.add_column("Branch", style="cyan")
@@ -146,9 +147,10 @@ def report_open_prs(data):
             status = "🟡"
         elif ci_status != 'SUCCESS':
             status = "❌"
+        number_color = "white" if row['isDraft'] else "green"
         table.add_row(
             row['repository']['name'],
-            f"#{row['number']}",
+            Text(f"#{row['number']}", style=number_color),
             status,
             Text(row['title'], style=Style(link=row['url'])),
             row['headRefName'],
