@@ -138,7 +138,7 @@ def report_open_prs(data):
     table.add_column("Updated", style="bright_black")
 
     for row in rows:
-        status = ""
+        status = "✅"
         ci_status = row['commits']['nodes'][0]['commit']['statusCheckRollup']['state']
         if row['mergeable'] != 'MERGEABLE':
             status = "❌"
