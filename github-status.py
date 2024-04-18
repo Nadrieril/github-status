@@ -87,7 +87,7 @@ def search_query(search):
     """
 
 # Used to construct a notification token
-MAGIC_BITS = b'\x93\x00\xCE\x00\x67\x82\xa6\xb2'
+MAGIC_BITS = b'\x93\x00\xCE\x00\x67\x82\xa6\xb3'
 def report_notifications(rows, user_id, org=None):
     rows.sort(key = lambda row: row['updated_at'])
 
@@ -97,20 +97,22 @@ def report_notifications(rows, user_id, org=None):
     table.add_column("Type")
     table.add_column("Reason")
     table.add_column("Updated", style="bright_black")
+    table.add_column("Token")
 
     for row in rows:
         if org:
             if row['repository']['owner']['login'] != org:
                 continue
         url = row['subject']['url'].replace("api.", "").replace("repos/", "").replace("pulls", "pull")
-        notification_token = 'NT_' + base64.b64encode(MAGIC_BITS + f"{row['id']}:{user_id}".encode()).decode().rstrip('=')
-        url = url + f"?notification_referrer_id={notification_token}"
+        notification_token = base64.b64encode(MAGIC_BITS + f"{row['id']}:{user_id}".encode()).decode().rstrip('=')
+        url = url + f"?notification_referrer_id=NT_{notification_token}"
         table.add_row(
             row['repository']['name'],
             Text(row['subject']['title'], style=Style(link=url)),
             row['subject']['type'],
             row['reason'],
             date_ago(row['updated_at']),
+            notification_token,
         )
     return table
 
