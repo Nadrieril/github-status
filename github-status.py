@@ -79,6 +79,21 @@ fragment PR on PullRequest {
       }
     }
   }
+  latestReviews(last: 1) {
+    nodes {
+      state
+    }
+  }
+  reviewDecision
+  reviewRequests(last: 1) {
+    nodes {
+      requestedReviewer {
+        ... on User {
+          login
+        }
+      }
+    }
+  }
 }
 """
 
@@ -133,25 +148,46 @@ def report_open_prs(data):
     table = Table(title="Open PRs", box=box.SIMPLE)
     table.add_column("Repo")
     table.add_column("Number")
-    table.add_column("")
+    table.add_column("CI")
+    table.add_column("Review")
     table.add_column("Title")
     table.add_column("Branch", style="cyan")
     table.add_column("Updated", style="bright_black")
 
     for row in rows:
-        status = "✅"
-        ci_status = row['commits']['nodes'][0]['commit']['statusCheckRollup']['state']
+        ci_status = "✅"
+        rolledup_status = row['commits']['nodes'][0]['commit']['statusCheckRollup']['state']
         if row['mergeable'] != 'MERGEABLE':
-            status = "❌"
-        elif ci_status == 'PENDING':
-            status = "🟡"
-        elif ci_status != 'SUCCESS':
-            status = "❌"
+            ci_status = "❌"
+        elif rolledup_status == 'PENDING':
+            ci_status = "🟡"
+        elif rolledup_status != 'SUCCESS':
+            ci_status = "❌"
+
+        review_status = "❔"
+        if row['isDraft']:
+            review_status = ""
+        if row['reviewDecision'] == 'APPROVED':
+            review_status = "✅"
+        else:
+            reviews = row['latestReviews']['nodes']
+            if len(reviews) == 0:
+                review_requests = row['reviewRequests']['nodes']
+                if len(review_requests) != 0:
+                    review_status = "🟡"
+            else:
+                state = reviews[0]['state']
+                if state == 'APPROVED':
+                    review_status = "✅"
+                elif state == 'CHANGES_REQUESTED':
+                    review_status = "❌"
+
         number_color = "white" if row['isDraft'] else "green"
         table.add_row(
             row['repository']['name'],
             Text(f"#{row['number']}", style=number_color),
-            status,
+            ci_status,
+            review_status,
             Text(row['title'], style=Style(link=row['url'])),
             row['headRefName'],
             date_ago(row['updatedAt']),
