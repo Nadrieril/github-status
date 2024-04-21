@@ -1,5 +1,5 @@
 import sys, json, subprocess
-import base64
+import base64, argparse
 from dateutil.parser import parse
 from datetime import datetime, UTC
 from babel.dates import format_timedelta
@@ -113,7 +113,7 @@ def search_query(search):
 
 # Used to construct a notification token
 MAGIC_BITS = b'\x93\x00\xCE\x00\x67\x82\xa6\xb3'
-def report_notifications(rows, user_id, org=None):
+def report_notifications(rows, user_id, orgs=set()):
     rows.sort(key = lambda row: row['updated_at'])
 
     table = Table(title="Notifications", box=box.SIMPLE)
@@ -125,9 +125,8 @@ def report_notifications(rows, user_id, org=None):
     table.add_column("Token")
 
     for row in rows:
-        if org:
-            if row['repository']['owner']['login'] != org:
-                continue
+        if row['repository']['owner']['login'] not in orgs:
+            continue
         url = row['subject']['url'].replace("api.", "").replace("repos/", "").replace("pulls", "pull")
         notification_token = base64.b64encode(MAGIC_BITS + f"{row['id']}:{user_id}".encode()).decode().rstrip('=')
         url = url + f"?notification_referrer_id=NT_{notification_token}"
@@ -239,21 +238,27 @@ if __name__ == "__main__":
     assert out.returncode == 0
     GITHUB_TOKEN = out.stdout.decode('utf-8').strip()
 
-    # If we're in a github repo, filter all the output to this repo's organization.
-    org = None
-    if len(sys.argv) > 1:
-        org = sys.argv[1]
-    else:
+    parser = argparse.ArgumentParser(prog='github-status')
+    parser.add_argument('--org', action='append',
+                        help='filter everything for this organization. Can be supplied several times.')
+    parser.add_argument('--auto-org', action='store_true',
+                        help='use the organization of the current repo as filter.')
+    args = parser.parse_args()
+
+    # Filter organizations
+    orgs = args.org or []
+    if args.auto_org:
         out = subprocess.run(["gh", "repo", "view", "--json", "owner"], capture_output=True)
         if out.returncode == 0:
             json = json.loads(out.stdout)
-            org = json['owner']['login']
+            orgs.append(json['owner']['login'])
 
+    # Fetch data
     notifications = github_api(GITHUB_TOKEN, 'notifications')
 
     open_prs_query = "state:open author:@me is:pr"
     assigned_query = "state:open assignee:@me"
-    if org:
+    for org in orgs:
         open_prs_query += f" org:{org}"
         assigned_query += f" org:{org}"
     query = FRAGMENT_ISSUE + FRAGMENT_PR + f"""query {{
@@ -263,7 +268,8 @@ if __name__ == "__main__":
     }}"""
     graphql_result = run_graphql_query(GITHUB_TOKEN, query)['data']
 
+    # Display
     user_id = graphql_result['user']['databaseId']
-    print(report_notifications(notifications, user_id, org))
+    print(report_notifications(notifications, user_id, set(orgs)))
     print(report_open_prs(graphql_result['open_prs']))
     print(report_assigned(graphql_result['assigned']))
