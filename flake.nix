@@ -18,10 +18,13 @@
           python-env = pkgs.python3.withPackages (ps: [
             ps.babel ps.dateutil ps.pyyaml ps.requests ps.rich
           ]);
-        in pkgs.writeScriptBin "github-status" ''
-          #!${pkgs.bash}/bin/bash
-          PATH=${pkgs.gh}/bin:$PATH ${python-env}/bin/python3 ${./github-status.py} "$@"
-        '';
+        in pkgs.writeShellApplication {
+          name = "github-status";
+          runtimeInputs = [ python-env pkgs.gh ];
+          text = ''
+            python3 ${./github-status.py} "$@"
+          '';
+        };
       in {
         packages = {
           inherit github-status;
