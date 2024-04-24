@@ -155,13 +155,16 @@ def report_open_prs(data):
 
     for row in rows:
         ci_status = "✅"
-        rolledup_status = row['commits']['nodes'][0]['commit']['statusCheckRollup']['state']
-        if row['mergeable'] != 'MERGEABLE':
-            ci_status = "❌"
-        elif rolledup_status == 'PENDING':
-            ci_status = "🟡"
-        elif rolledup_status != 'SUCCESS':
-            ci_status = "❌"
+        if rolledup_status := row['commits']['nodes'][0]['commit']['statusCheckRollup']:
+            rolledup_status = rolledup_status['state']
+            if row['mergeable'] != 'MERGEABLE':
+                ci_status = "❌"
+            elif rolledup_status == 'PENDING':
+                ci_status = "🟡"
+            elif rolledup_status != 'SUCCESS':
+                ci_status = "❌"
+        else:
+            ci_status = "❔"
 
         review_status = "❔"
         if row['isDraft']:
