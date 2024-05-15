@@ -11,21 +11,28 @@
       let
         pkgs = import nixpkgs {
           inherit system;
-          overlays = [];
+          overlays = [ ];
         };
 
-        github-status = let
-          python-env = pkgs.python3.withPackages (ps: [
-            ps.babel ps.dateutil ps.pyyaml ps.requests ps.rich
-          ]);
-        in pkgs.writeShellApplication {
-          name = "github-status";
-          runtimeInputs = [ python-env pkgs.gh ];
-          text = ''
-            python3 ${./github-status.py} "$@"
-          '';
-        };
-      in {
+        github-status =
+          let
+            python-env = pkgs.python3.withPackages (ps: [
+              ps.babel
+              ps.dateutil
+              ps.pyyaml
+              ps.requests
+              ps.rich
+            ]);
+          in
+          pkgs.writeShellApplication {
+            name = "github-status";
+            runtimeInputs = [ python-env pkgs.gh ];
+            text = ''
+              python3 ${./github-status.py} "$@"
+            '';
+          };
+      in
+      {
         packages = {
           inherit github-status;
           default = github-status;
